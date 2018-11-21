@@ -57,16 +57,16 @@ weighted_poll_ra <- data1 %>%
 #Calculating the unweighted polled republican advantage  
 
 unweighted_poll_ra <- data1 %>%
-  select(state_district, response) %>%
+  select(state_district, response, gender) %>%
   group_by(response, state_district) %>%
   tally() %>%
   spread(key = "response", value = "n") %>%
   mutate(totalvote = Dem + Rep + Und) %>%
   mutate(URA = (Rep - Dem) / totalvote) %>%
-  select(state_district, URA)
+  select(state_district, URA, gender)
 
 data2 <- bind_cols(weighted_poll_ra, unweighted_poll_ra) %>%
-  select(state_district, WRA, URA)
+  select(state_district, WRA, URA, gender)
 
 ```
 

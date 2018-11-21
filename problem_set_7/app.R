@@ -35,16 +35,7 @@ ui <- fluidPage(
                   label = "Weighted or Unweighted Polled Republican Advantage",
                   choices = c("Unweighted" = "URA",
                               "Weighted" = "WRA"), 
-                  selected = "URA"),
-      
-      # Selecting variable for z axis / point size
-      selectInput(inputId = "z", 
-                  label = "Present point size by:",
-                  choices = c("Total number of votes" = "totalvotes",
-                              "Total number of Republican votes" = "rep_votes", 
-                              "Total number of Democratic votes" = "dem_votes",
-                              "Total number of other votes" = "other_votes"), 
-                  selected = "totalvotes")
+                  selected = "URA")
     ),
     
     # Show a plot of the generated distribution
@@ -60,11 +51,11 @@ server <- function(input, output) {
   
   output$scatterplot <- renderPlot({
     data %>% 
-      ggplot(aes_string(x = input$x, y = data$ARA, size = input$z, color = data$win_party), xlim = c(-2.5, 2.5) ylim = c(-2.5, 2.5)) + 
+      ggplot(aes_string(x = input$x, y = data$ARA, color = data$win_party)) + 
       geom_point() +
+      scale_x_continuous(name="Polled Republican Advantage", limits=c(-0.25, 0.25)) +
+      scale_y_continuous(name="Actual Republican Advantage", limits=c(-0.25, 0.25)) +
       scale_color_manual(values = c("D" = "blue", "R" = "red", "UNDECIDED" = "green")) +
-      xlab("Polled Republican Advantage") +
-      ylab("Actual Results") +
       ggtitle("How accurate were the weighted versus unweighted polls in predicting the republican advantage in the last election?")
   })
 }
