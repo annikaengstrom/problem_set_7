@@ -85,5 +85,7 @@ realdata <- realdata %>%
 
 combined <- left_join(realdata, data2, by = "state_district")
 
+write_rds(combined, "combined.rds")
+
 ```
 
