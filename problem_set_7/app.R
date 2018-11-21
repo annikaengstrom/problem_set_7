@@ -16,6 +16,7 @@ library(lubridate)
 library(rebus)
 library(shiny)
 library(readr)
+library(ggrepel)
 
 
 data <- read_rds("combined.rds")
@@ -33,9 +34,11 @@ ui <- fluidPage(
       # Selecting variable for x axis
       radioButtons(inputId = "x", 
                   label = "Weighted or Unweighted Polled Republican Advantage",
-                  choices = c("Unweighted" = "URA",
-                              "Weighted" = "WRA"), 
-                  selected = "URA")
+                  choices = c("Unweighted female voters" = "URAF",
+                              "Weighted female voters" = "WRAF",
+                              "Unweighted male voters" = "URAM",
+                              "Weighted male voters" = "WRAM"), 
+                  selected = "URAF")
     ),
     
     # Show a plot of the generated distribution
@@ -55,6 +58,7 @@ server <- function(input, output) {
       geom_point() +
       scale_x_continuous(name="Polled Republican Advantage", limits=c(-0.25, 0.25)) +
       scale_y_continuous(name="Actual Republican Advantage", limits=c(-0.25, 0.25)) +
+      geom_label_repel(aes(label = state_district), size = 3, force = 3) +
       scale_color_manual(values = c("D" = "blue", "R" = "red", "UNDECIDED" = "green")) +
       ggtitle("How accurate were the weighted versus unweighted polls in predicting the republican advantage in the last election?")
   })

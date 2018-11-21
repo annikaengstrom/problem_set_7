@@ -44,29 +44,50 @@ data1 <- data %>%
   filter(wave_code == "3")
 
 #Calculating the weighted polled republican advantage
-weighted_poll_ra <- data1 %>%
-  select(state_district, response, final_weight) %>%
+weighted_poll_ra_m <- data1 %>%
+  select(state_district, response, final_weight, gender) %>%
+  filter(gender == "Male") %>%
   group_by(response, state_district) %>%
   tally(wt = final_weight) %>%
   spread(key = "response", value = "n") %>%
   mutate(totalvote = Dem + Rep + Und) %>%
-  mutate(WRA = (Rep - Dem) / totalvote) %>%
-  select(state_district, WRA)
+  mutate(WRAM = (Rep - Dem) / totalvote) %>%
+  select(state_district, WRAM)
   
+weighted_poll_ra_f <- data1 %>%
+  select(state_district, response, final_weight, gender) %>%
+  filter(gender == "Female") %>%
+  group_by(response, state_district) %>%
+  tally(wt = final_weight) %>%
+  spread(key = "response", value = "n") %>%
+  mutate(totalvote = Dem + Rep + Und) %>%
+  mutate(WRAF = (Rep - Dem) / totalvote) %>%
+  select(state_district, WRAF)
   
 #Calculating the unweighted polled republican advantage  
 
-unweighted_poll_ra <- data1 %>%
+unweighted_poll_ra_m <- data1 %>%
   select(state_district, response, gender) %>%
+  filter(gender == "Male") %>%
   group_by(response, state_district) %>%
   tally() %>%
   spread(key = "response", value = "n") %>%
   mutate(totalvote = Dem + Rep + Und) %>%
-  mutate(URA = (Rep - Dem) / totalvote) %>%
-  select(state_district, URA, gender)
+  mutate(URAM = (Rep - Dem) / totalvote) %>%
+  select(state_district, URAM)
 
-data2 <- bind_cols(weighted_poll_ra, unweighted_poll_ra) %>%
-  select(state_district, WRA, URA, gender)
+unweighted_poll_ra_f <- data1 %>%
+  select(state_district, response, gender) %>%
+  filter(gender == "Female") %>%
+  group_by(response, state_district) %>%
+  tally() %>%
+  spread(key = "response", value = "n") %>%
+  mutate(totalvote = Dem + Rep + Und) %>%
+  mutate(URAF = (Rep - Dem) / totalvote) %>%
+  select(state_district, URAF)
+
+data2 <- bind_cols(weighted_poll_ra_m, weighted_poll_ra_f, unweighted_poll_ra_m, unweighted_poll_ra_f) %>%
+  select(state_district, WRAM, WRAF, URAM, URAF)
 
 ```
 
