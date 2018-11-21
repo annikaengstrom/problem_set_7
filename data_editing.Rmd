@@ -17,16 +17,21 @@ library(lubridate)
 library(rebus)
 library(janitor)
 
+# Downloading the necessary files from upshot
 download.file(url = "https://github.com/TheUpshot/2018-live-poll-results/archive/master.zip",
               destfile = "ps_7_2018-live-poll-results-master.zip",
               mode = "wb")
 
+# Unzipping the data files
 unzip("ps_7_2018-live-poll-results-master.zip")
 
+# Deleting the zipped folder
 file_delete("ps_7_2018-live-poll-results-master.zip")
 
+# Creating a value called file_names which is a list of all the files within the upshot folder
 file_names <- dir_ls("2018-live-poll-results-master/data/")
 
+# Turning it into a data frame with the file names as the source column
 data <- map_dfr(file_names, read_csv, .id = "source")
 
 ```
@@ -38,12 +43,14 @@ data1 <- data %>%
   filter(grepl("sen", source) == FALSE, grepl("gov", source) == FALSE) %>%
   mutate(state_district = str_extract(source, pattern = "poll-[a-z][a-z][0-9][0-9]")) %>% 
   mutate(state_district = str_sub(state_district, 6, 9)) %>%
+# Making the state codes upper case for presentation  
   mutate(state_district = paste0(toupper(str_extract(state_district, pattern = "[a-z][a-z]")), "-", str_extract(state_district, pattern = "\\d\\d"))) %>%
-  mutate(wave_code = str_extract(source, pattern = "[a-z][a-z][0-9][0-9]-[0-9]")) %>%
+# Only keeping third wave polls 
+   mutate(wave_code = str_extract(source, pattern = "[a-z][a-z][0-9][0-9]-[0-9]")) %>%
   mutate(wave_code = str_sub(wave_code, 6, 6)) %>%
   filter(wave_code == "3")
 
-#Calculating the weighted polled republican advantage
+# Calculating the weighted polled republican advantage for males
 weighted_poll_ra_m <- data1 %>%
   select(state_district, response, final_weight, gender) %>%
   filter(gender == "Male") %>%
@@ -51,9 +58,11 @@ weighted_poll_ra_m <- data1 %>%
   tally(wt = final_weight) %>%
   spread(key = "response", value = "n") %>%
   mutate(totalvote = Dem + Rep + Und) %>%
+# Creating new WRAM (Weighted Republican Advantage for Males) variable
   mutate(WRAM = (Rep - Dem) / totalvote) %>%
   select(state_district, WRAM)
-  
+
+# Calculating the weighted polled republican advantage for females  
 weighted_poll_ra_f <- data1 %>%
   select(state_district, response, final_weight, gender) %>%
   filter(gender == "Female") %>%
@@ -61,11 +70,11 @@ weighted_poll_ra_f <- data1 %>%
   tally(wt = final_weight) %>%
   spread(key = "response", value = "n") %>%
   mutate(totalvote = Dem + Rep + Und) %>%
+# Creating new WRAF (Weighted Republican Advantage for Females) variable
   mutate(WRAF = (Rep - Dem) / totalvote) %>%
   select(state_district, WRAF)
   
-#Calculating the unweighted polled republican advantage  
-
+# Calculating the unweighted polled republican advantage for males 
 unweighted_poll_ra_m <- data1 %>%
   select(state_district, response, gender) %>%
   filter(gender == "Male") %>%
@@ -73,9 +82,11 @@ unweighted_poll_ra_m <- data1 %>%
   tally() %>%
   spread(key = "response", value = "n") %>%
   mutate(totalvote = Dem + Rep + Und) %>%
+# Creating new URAM (Unweighted Republican Advantage for Males) variable 
   mutate(URAM = (Rep - Dem) / totalvote) %>%
   select(state_district, URAM)
 
+# Calculating the unweighted polled republican advantage for females 
 unweighted_poll_ra_f <- data1 %>%
   select(state_district, response, gender) %>%
   filter(gender == "Female") %>%
@@ -83,29 +94,35 @@ unweighted_poll_ra_f <- data1 %>%
   tally() %>%
   spread(key = "response", value = "n") %>%
   mutate(totalvote = Dem + Rep + Und) %>%
+# Creating new URAF (Unweighted Republican Advantage for Females) variable 
   mutate(URAF = (Rep - Dem) / totalvote) %>%
   select(state_district, URAF)
 
+# Binding them all together to create one large table with columns varying by weighting and by gender
 data2 <- bind_cols(weighted_poll_ra_m, weighted_poll_ra_f, unweighted_poll_ra_m, unweighted_poll_ra_f) %>%
   select(state_district, WRAM, WRAF, URAM, URAF)
 
 ```
 
 ```{r}
-
+# Reading in the actual data from the election
 realdata <- read.csv("~/problem_set_7/mt_2_results.csv")
 
+# The data loaded with the voting counts as factor levels and with commas separating each 1000 (e.g. 10,453 vs. 10453) and so I converted it to numeric form to use in calculations and present in a graph. 
 realdata$dem_votes <- as.numeric(gsub(",","",realdata$dem_votes))
 realdata$rep_votes <- as.numeric(gsub(",","",realdata$rep_votes))
 realdata$other_votes <- as.numeric(gsub(",","",realdata$other_votes))
 
+# Combining the state and district variables to mimic the structure in the polling data by having a capitalised state code, followed by a dash, followed by the numerical district code. Also created the ARA (Actual Republican Advantage) variable.
 realdata <- realdata %>%
   unite(state_district, state, district, sep = "-") %>%
   mutate(totalvotes = dem_votes + rep_votes + other_votes) %>%
   mutate(ARA = (rep_votes - (dem_votes + other_votes))/totalvotes)
 
+# Created one large dataset with polling data and actual data, using state district code as the combining column
 combined <- left_join(realdata, data2, by = "state_district")
 
+# Creating the data file to be read by the shiny app
 write_rds(combined, "combined.rds")
 
 ```

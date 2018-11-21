@@ -56,8 +56,10 @@ server <- function(input, output) {
     data %>% 
       ggplot(aes_string(x = input$x, y = data$ARA, color = data$win_party)) + 
       geom_point() +
+  # In order to actually compare the values, it is far more effective to have the exact same axis dimensions and observe around the origin and so I changed the axis limits.     
       scale_x_continuous(name="Polled Republican Advantage", limits=c(-0.25, 0.25)) +
       scale_y_continuous(name="Actual Republican Advantage", limits=c(-0.25, 0.25)) +
+  # I wanted to be able to see which state districts were the least accurate and so I labelled the points by their state district code
       geom_label_repel(aes(label = state_district), size = 3, force = 3) +
       scale_color_manual(values = c("D" = "blue", "R" = "red", "UNDECIDED" = "green")) +
       ggtitle("How accurate were the weighted versus unweighted polls in predicting the republican advantage in the last election?")
