@@ -1,0 +1,89 @@
+---
+title: "ps7_clean_data"
+author: "Annika Engstrom"
+date: "11/20/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE, cache = TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(tidyverse)
+library(fs)
+library(knitr)
+library(stringr)
+library(lubridate)
+library(rebus)
+library(janitor)
+
+download.file(url = "https://github.com/TheUpshot/2018-live-poll-results/archive/master.zip",
+              destfile = "ps_7_2018-live-poll-results-master.zip",
+              mode = "wb")
+
+unzip("ps_7_2018-live-poll-results-master.zip")
+
+file_delete("ps_7_2018-live-poll-results-master.zip")
+
+file_names <- dir_ls("2018-live-poll-results-master/data/")
+
+data <- map_dfr(file_names, read_csv, .id = "source")
+
+```
+
+```{r}
+
+# Keeping only house data and wave three data and creating a new variable called state district
+data1 <- data %>%
+  filter(grepl("sen", source) == FALSE, grepl("gov", source) == FALSE) %>%
+  mutate(state_district = str_extract(source, pattern = "poll-[a-z][a-z][0-9][0-9]")) %>% 
+  mutate(state_district = str_sub(state_district, 6, 9)) %>%
+  mutate(state_district = paste0(toupper(str_extract(state_district, pattern = "[a-z][a-z]")), "-", str_extract(state_district, pattern = "\\d\\d"))) %>%
+  mutate(wave_code = str_extract(source, pattern = "[a-z][a-z][0-9][0-9]-[0-9]")) %>%
+  mutate(wave_code = str_sub(wave_code, 6, 6)) %>%
+  filter(wave_code == "3")
+
+#Calculating the weighted polled republican advantage
+weighted_poll_ra <- data1 %>%
+  select(state_district, response, final_weight) %>%
+  group_by(response, state_district) %>%
+  tally(wt = final_weight) %>%
+  spread(key = "response", value = "n") %>%
+  mutate(totalvote = Dem + Rep + Und) %>%
+  mutate(WRA = (Rep - Dem) / totalvote) %>%
+  select(state_district, WRA)
+  
+  
+#Calculating the unweighted polled republican advantage  
+
+unweighted_poll_ra <- data1 %>%
+  select(state_district, response) %>%
+  group_by(response, state_district) %>%
+  tally() %>%
+  spread(key = "response", value = "n") %>%
+  mutate(totalvote = Dem + Rep + Und) %>%
+  mutate(URA = (Rep - Dem) / totalvote) %>%
+  select(state_district, URA)
+
+data2 <- bind_cols(weighted_poll_ra, unweighted_poll_ra) %>%
+  select(state_district, WRA, URA)
+
+```
+
+```{r}
+
+realdata <- read.csv("~/problem_set_7/mt_2_results.csv")
+
+realdata$dem_votes <- as.numeric(gsub(",","",realdata$dem_votes))
+realdata$rep_votes <- as.numeric(gsub(",","",realdata$rep_votes))
+realdata$other_votes <- as.numeric(gsub(",","",realdata$other_votes))
+
+realdata <- realdata %>%
+  unite(state_district, state, district, sep = "-") %>%
+  mutate(totalvotes = dem_votes + rep_votes + other_votes) %>%
+  mutate(ARA = (rep_votes - (dem_votes + other_votes))/totalvotes)
+
+combined <- left_join(realdata, data2, by = "state_district")
+
+```
+
